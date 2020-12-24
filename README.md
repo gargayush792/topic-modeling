@@ -1,4 +1,4 @@
-# topic-modeling
+# Topic Modeling on Restaurant Data
 
 ## File descriptions
 > - LDA_food_data.ipynb: Main code file. Contains following steps - 
