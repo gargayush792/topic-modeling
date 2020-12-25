@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[26]:
+# In[ ]:
 
 
-from gensim.utils import simple_preprocess
-from gensim.parsing.preprocessing import STOPWORDS
-from nltk.stem import WordNetLemmatizer
-from nltk.stem import PorterStemmer
+get_ipython().system('pip install -r requirements.txt')
+
+
+# In[1]:
+
+
 import gensim
 import numpy as np
 import nltk
@@ -16,14 +18,19 @@ import pyLDAvis.gensim
 import pickle
 from collections import Counter
 import matplotlib.pyplot as plt
+from gensim.utils import simple_preprocess
+from gensim.parsing.preprocessing import STOPWORDS
+from nltk.stem import WordNetLemmatizer
+from nltk.stem import PorterStemmer
+from gensim.models import CoherenceModel
 nltk.download('wordnet')
 np.random.seed(2018)
 
 
-# In[3]:
+# In[2]:
 
 
-data = pd.read_parquet("/Users/ayushgarg/Downloads/products.parquet.gz")
+data = pd.read_parquet("./products.parquet.gz")
 
 
 # ### Data Preprocessing
@@ -33,31 +40,31 @@ data = pd.read_parquet("/Users/ayushgarg/Downloads/products.parquet.gz")
 # * Remove stopwords from the text 
 # * Lemmatizing and stemming the final tokens
 
-# In[4]:
+# In[3]:
 
 
 data['product_description'] = data['product_description'].fillna(value = "")
 
 
-# In[5]:
+# In[4]:
 
 
 data["product_concat"] = data['product_name'] + data['product_description']
 
 
-# In[6]:
+# In[5]:
 
 
 data
 
 
-# In[7]:
+# In[6]:
 
 
 data.info()
 
 
-# In[8]:
+# In[7]:
 
 
 def lemmatize_stemming(text):
@@ -65,7 +72,7 @@ def lemmatize_stemming(text):
     return porter.stem(WordNetLemmatizer().lemmatize(text, pos='v'))
 
 
-# In[9]:
+# In[8]:
 
 
 def preprocess(text):
@@ -76,31 +83,31 @@ def preprocess(text):
     return result
 
 
-# In[10]:
+# In[9]:
 
 
 processed_docs = data['product_concat'].map(preprocess)
 
 
-# In[17]:
+# In[10]:
 
 
 processed_docs
 
 
-# In[13]:
+# In[11]:
 
 
 pickle.dump(processed_docs, open( "processed_docs.p", "wb" ))
 
 
-# In[16]:
+# In[12]:
 
 
 processed_docs = pickle.load(open("processed_docs.p", "rb"))
 
 
-# In[18]:
+# In[13]:
 
 
 from wordcloud import WordCloud
@@ -110,25 +117,19 @@ for word in processed_docs:
 all_words = ''.join(all_word)
 
 
-# In[20]:
+# In[14]:
 
 
-word_dict = Counter(all_word)
+word_dict = dict(Counter(all_word))
 
 
-# In[22]:
-
-
-word_dict = dict(word_dict)
-
-
-# In[31]:
+# In[15]:
 
 
 wordcloud = WordCloud(width=800, height=500, random_state=21, max_font_size=110, background_color="white").generate_from_frequencies(word_dict)
 
 
-# In[32]:
+# In[16]:
 
 
 plt.figure(figsize=(15, 8))
@@ -145,39 +146,38 @@ plt.show()
 # * Get tf-idf representation from bag of words
 # * Train LDA(Latent Dirichlet Allocation) model with 3 topics
 
-# In[12]:
+# In[17]:
 
 
 dictionary = gensim.corpora.Dictionary(processed_docs)
 
 
-# In[13]:
+# In[18]:
 
 
 len(dictionary)
 
 
-# In[14]:
+# In[19]:
 
 
 dictionary.filter_extremes(no_below=15, no_above=0.5, keep_n=20000)
 
 
-# In[15]:
+# In[20]:
 
 
 bow_corpus = [dictionary.doc2bow(doc) for doc in processed_docs]
 
 
-# In[16]:
+# In[25]:
 
 
-from gensim import corpora, models
-tfidf = models.TfidfModel(bow_corpus)
+tfidf = gensim.models.TfidfModel(bow_corpus)
 corpus_tfidf = tfidf[bow_corpus]
 
 
-# In[17]:
+# In[26]:
 
 
 lda_model_3 = gensim.models.LdaMulticore(corpus_tfidf, num_topics=3, id2word=dictionary, passes=3, workers=2)
@@ -185,13 +185,13 @@ for idx, topic in lda_model_3.print_topics(-1):
     print('Topic: {} \nWords: {}'.format(idx, topic))
 
 
-# In[18]:
+# In[27]:
 
 
 lda_display = pyLDAvis.gensim.prepare(lda_model_3, corpus_tfidf, dictionary, sort_topics=False)
 
 
-# In[19]:
+# In[28]:
 
 
 pyLDAvis.display(lda_display)
@@ -199,14 +199,14 @@ pyLDAvis.display(lda_display)
 
 # ### Model Inference on the original data
 
-# In[20]:
+# In[29]:
 
 
 topics = []
 scores = []
 
 
-# In[21]:
+# In[30]:
 
 
 for scores_row in lda_model_3[corpus_tfidf]:
@@ -215,7 +215,7 @@ for scores_row in lda_model_3[corpus_tfidf]:
     scores.append(sorted_row[0][1])
 
 
-# In[22]:
+# In[31]:
 
 
 processed_df = data.copy()
@@ -223,13 +223,13 @@ processed_df['topics'] = topics
 processed_df['scores'] = scores
 
 
-# In[23]:
+# In[32]:
 
 
 processed_df['topics'].value_counts()
 
 
-# In[24]:
+# In[33]:
 
 
 processed_df
@@ -237,37 +237,37 @@ processed_df
 
 # ### Checking top products in each topic ordered by score
 
-# In[25]:
+# In[34]:
 
 
 topic0 = processed_df.loc[processed_df['topics'] == 0].sort_values('scores', ascending = False)
 
 
-# In[26]:
+# In[35]:
 
 
 topic1 = processed_df.loc[processed_df['topics'] == 1].sort_values('scores', ascending = False)
 
 
-# In[27]:
+# In[36]:
 
 
 topic2 = processed_df.loc[processed_df['topics'] == 2].sort_values('scores', ascending = False)
 
 
-# In[28]:
+# In[37]:
 
 
 topic0[:500]['product_name'].value_counts()
 
 
-# In[34]:
+# In[38]:
 
 
 topic1[:5000]['product_name'].value_counts()
 
 
-# In[38]:
+# In[39]:
 
 
 topic2[:10000]['product_name'].value_counts()
@@ -278,80 +278,79 @@ topic2[:10000]['product_name'].value_counts()
 # * Topic 1 mostly contains main course food items including local Singaporean foods
 # * Topic 2 mostly contains Macdonald's items and drinks
 
-# In[39]:
+# ### Vendor Recommendations
+# 
+# - Group topics by Geohash and calculate % of each topic in the geohash. 
+# - For a given vendor, we can then make recommendations based on the popular topics in his geohash
+
+# In[40]:
 
 
 grouped_processed = processed_df.groupby(['vendor_geohash', 'topics']).agg({'product_name': 'count'})
 grouped_pcts = grouped_processed.groupby(level=0).apply(lambda x: 100 * x / float(x.sum()))
 
 
-# In[40]:
+# In[41]:
 
 
 grouped_pcts = grouped_pcts.reset_index()
 
 
-# In[41]:
+# In[42]:
 
 
 grouped_pcts
 
 
-# In[42]:
+# In[43]:
 
 
 pivoted = grouped_pcts.pivot(index='vendor_geohash', columns='topics', values='product_name')
 
 
-# In[50]:
+# In[44]:
 
 
 pivoted = pivoted.fillna(0.0)
 
 
-# In[72]:
+# In[45]:
 
 
 pivoted.columns = ['T0: Daily Use Items' , 'T1: Main Course', 'T2: McDonalds and drinks']
 
 
-# In[73]:
+# In[46]:
 
 
 pivoted
 
 
-# In[70]:
+# In[47]:
 
 
 processed_df = processed_df.merge(pivoted, on = 'vendor_geohash')
 
 
-# In[74]:
+# In[48]:
 
 
 processed_df.sort_values('product_id')
 
 
-# In[20]:
-
-
-from gensim.models import CoherenceModel
-
-
-# In[77]:
+# In[49]:
 
 
 coherence_model_lda = CoherenceModel(model=lda_model_3, texts=processed_docs, dictionary=dictionary, coherence='c_v')
 
 
-# In[78]:
+# In[50]:
 
 
 coherence_lda = coherence_model_lda.get_coherence()
 
 
-# In[79]:
+# In[51]:
 
 
 coherence_lda
@@ -359,7 +358,7 @@ coherence_lda
 
 # ### Selecting the appropriate number of topics
 
-# In[21]:
+# In[52]:
 
 
 def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=2):
@@ -389,13 +388,13 @@ def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=2):
     return model_list, coherence_values
 
 
-# In[22]:
+# In[53]:
 
 
 model_list, coherence_values = compute_coherence_values(dictionary=dictionary, corpus=corpus_tfidf, texts=processed_docs, start=2, limit=25, step=5)
 
 
-# In[24]:
+# In[54]:
 
 
 limit=25; start=2; step=5;
@@ -405,10 +404,4 @@ plt.xlabel("Num Topics")
 plt.ylabel("Coherence score")
 plt.legend(("coherence_values"), loc='best')
 plt.show()
-
-
-# In[ ]:
-
-
-
 
