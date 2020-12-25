@@ -9,7 +9,7 @@
 >   5. LDAvis plot to visualize topics
 >   6. Recommendations to vendors
 >   7. Coherence scores for different number of topics
-> - LAD_food_data.py: Python file to the same code above
+> - LDA_food_data.py: .py file for the code above
 > - requirements.txt: Project requirements file
 > - processed_docs.p: Pickled cleaned data 
 > - products.parquet.gz: Data file
